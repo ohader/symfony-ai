@@ -14,6 +14,7 @@ namespace Symfony\AI\Platform\Bridge\Ollama;
 use Symfony\AI\Platform\Exception\InvalidArgumentException;
 use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\ModelClientInterface;
+use Symfony\AI\Platform\ModelClientTrait;
 use Symfony\AI\Platform\Result\RawHttpResult;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -22,6 +23,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class OllamaClient implements ModelClientInterface
 {
+    use ModelClientTrait;
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private string $hostUrl,
@@ -30,7 +33,7 @@ final readonly class OllamaClient implements ModelClientInterface
 
     public function supports(Model $model): bool
     {
-        return $model instanceof Ollama;
+        return $this->hasModelAttribute($model, 'ollama');
     }
 
     public function request(Model $model, array|string $payload, array $options = []): RawHttpResult

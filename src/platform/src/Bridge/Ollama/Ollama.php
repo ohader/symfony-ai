@@ -11,12 +11,14 @@
 
 namespace Symfony\AI\Platform\Bridge\Ollama;
 
+use Symfony\AI\Platform\Attribute\AsModel;
 use Symfony\AI\Platform\Capability;
 use Symfony\AI\Platform\Model;
 
 /**
  * @author Joshua Behrens <code@joshua-behrens.de>
  */
+#[AsModel(platform: 'ollama', aspect: 'default')]
 class Ollama extends Model
 {
     public const DEEPSEEK_R_1 = 'deepseek-r1';
