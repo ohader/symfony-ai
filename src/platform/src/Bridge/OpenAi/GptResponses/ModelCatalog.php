@@ -1,0 +1,35 @@
+<?php
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Symfony\AI\Platform\Bridge\OpenAi\GptResponses;;
+
+use Symfony\AI\Platform\Bridge\OpenAi\Gpt;
+use Symfony\AI\Platform\Bridge\OpenAi\ModelCatalog as OpenAiModelCatalog;
+use Symfony\AI\Platform\Capability;
+use Symfony\AI\Platform\ModelCatalog\AbstractModelCatalog;
+
+/**
+ * @author Oskar Stark <oskarstark@googlemail.com>
+ */
+final class ModelCatalog extends AbstractModelCatalog
+{
+    /**
+     * @param array<string, array{class: string, capabilities: list<Capability>}> $additionalModels
+     */
+    public function __construct(array $additionalModels = [])
+    {
+        $defaultModels = array_filter(
+            (new OpenAiModelCatalog())->models,
+            static fn(array $model): bool => $model['class'] === Gpt::class,
+        );
+        $this->models = array_merge($defaultModels, $additionalModels);
+    }
+}

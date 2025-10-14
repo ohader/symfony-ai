@@ -17,6 +17,7 @@ use Symfony\AI\Platform\Exception\BadRequestException;
 use Symfony\AI\Platform\Exception\ContentFilterException;
 use Symfony\AI\Platform\Exception\RateLimitExceededException;
 use Symfony\AI\Platform\Exception\RuntimeException;
+use Symfony\AI\Platform\Message\Role;
 use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\Result\ChoiceResult;
 use Symfony\AI\Platform\Result\RawHttpResult;
@@ -70,7 +71,21 @@ final class ResultConverter implements ResultConverterInterface
         }
 
         $data = $result->getData();
+        $objectType = $data['object'] ?? null;
 
+        if ($objectType === 'chat.completion') {
+            return $this->convertChatCompletionType($data);
+        }
+
+        if ($objectType === 'response') {
+            return $this->convertResponseType($data);
+        }
+
+        throw new RuntimeException(\sprintf('Unexpected object type "%s".', $objectType ?? 'null'));
+    }
+
+    private function convertChatCompletionType(array $data): ResultInterface
+    {
         if (isset($data['error']['code']) && 'content_filter' === $data['error']['code']) {
             throw new ContentFilterException($data['error']['message']);
         }
@@ -86,6 +101,23 @@ final class ResultConverter implements ResultConverterInterface
         $choices = array_map($this->convertChoice(...), $data['choices']);
 
         return 1 === \count($choices) ? $choices[0] : new ChoiceResult(...$choices);
+    }
+
+    private function convertResponseType(array $data): ResultInterface
+    {
+        if (isset($data['error']['code']) && 'content_filter' === $data['error']['code']) {
+            throw new ContentFilterException($data['error']['message']);
+        }
+
+        if (isset($data['error'])) {
+            throw new RuntimeException(\sprintf('Error "%s"-%s (%s): "%s".', $data['error']['code'], $data['error']['type'], $data['error']['param'], $data['error']['message']));
+        }
+
+        if (!isset($data['output'])) {
+            throw new RuntimeException('Response does not contain output.');
+        }
+
+        return $this->convertOutput($data['output']);
     }
 
     private function convertStream(HttpResponse $result): \Generator
@@ -190,6 +222,31 @@ final class ResultConverter implements ResultConverterInterface
         }
 
         throw new RuntimeException(\sprintf('Unsupported finish reason "%s".', $choice['finish_reason']));
+    }
+
+    private function convertOutput(array $output): ToolCallResult|TextResult
+    {
+        $toolCalls = array_filter($output, static fn(array $item): bool => $item['type'] === 'function_call');
+        if ($toolCalls !== []) {
+            return new ToolCallResult(...array_map(
+                static fn(array $toolCall): ToolCall => new ToolCall(
+                    $toolCall['id'],
+                    $toolCall['name'],
+                    json_decode($toolCall['arguments'], true, \JSON_THROW_ON_ERROR),
+                ),
+                $toolCalls,
+            ));
+        }
+
+        // @todo https://platform.openai.com/docs/api-reference/responses/object#responses/object-output
+        foreach ($output as $item) {
+            if ($item['type'] !== 'message' || $item['role'] !== Role::Assistant->value) {
+                continue;
+            }
+            return new TextResult($item['content'][0]['text']);
+        }
+
+        throw new RuntimeException('Response does not contain output.');
     }
 
     /**
