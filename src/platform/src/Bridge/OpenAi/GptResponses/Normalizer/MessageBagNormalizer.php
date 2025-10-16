@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\AI\Platform\Bridge\OpenAi\GptResponses;
+namespace Symfony\AI\Platform\Bridge\OpenAi\GptResponses\Normalizer;
 
 use Symfony\AI\Platform\Contract;
 use Symfony\AI\Platform\Message\MessageBag;

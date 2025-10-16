@@ -23,8 +23,11 @@ final readonly class GptResponsesContract extends Contract
     public static function create(NormalizerInterface ...$normalizer): Contract
     {
         return parent::create(
-            new MessageBagNormalizer(),
+            new Normalizer\MessageBagNormalizer(),
             new DocumentNormalizer(),
+            new Normalizer\Content\ImageNormalizer(),
+            new Normalizer\Content\ImageUrlNormalizer(),
+            new Normalizer\Content\TextNormalizer(),
             ...$normalizer
         );
     }
